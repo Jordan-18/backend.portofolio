@@ -1,10 +1,10 @@
 const { where } = require('sequelize')
 const {datawebsite, galleries} = require('../Model/datawebsite.model.js')
-
+const AWS = require('aws-sdk')
 
 module.exports = class datawebsiteService{
     find = async (req) => {
-        const response = await datawebsite.findAll({
+        let response = await datawebsite.findAll({
             where:{
                 status: 1
             },
@@ -13,6 +13,17 @@ module.exports = class datawebsiteService{
                 ['created_at', 'DESC']
             ]
         })
+
+        response = await Promise.all(
+            response.map(async (item) => {
+            const plain = item.get({ plain: true });
+            const signedUrl = await this.findImageS3(plain.gambar);
+                return {
+                    ...plain,
+                    gambar: signedUrl,
+                };
+            })
+        );
         return response
     }
     findOne = async (id) => {
@@ -44,5 +55,25 @@ module.exports = class datawebsiteService{
         response.sort((a, b) => b.Total - a.Total)
         
         return response
+    }
+
+    findImageS3 = async (img_url) => {
+        const s3 = new AWS.S3({
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+            region: process.env.AWS_DEFAULT_REGION,
+            endpoint: process.env.AWS_ENDPOINT,
+            // signatureVersion: "v4"
+        });
+
+        const params = {
+            Bucket: "ideghonam",
+            Key: "projects/" + img_url,
+            Expires: 10
+        };
+
+        const url = await s3.getSignedUrlPromise("getObject", params);
+
+        return url
     }
 }
