@@ -16,10 +16,17 @@ module.exports = class datawebsiteService{
 
         response = await Promise.all(
             response.map(async (item) => {
-            const plain = item.get({ plain: true });
-            const signedUrl = await this.findImageS3(plain.gambar);
+                const plain = item.get({ plain: true });
+                const signedUrl = await this.findImageS3(plain.gambar);
                 return {
-                    ...plain,
+                    // ...plain,
+                    num_: plain.id,
+                    app: plain.app,
+                    tools: plain.tools,
+                    author: plain.author,
+                    github_url: plain.github_url,
+
+                    gambar_name: plain.gambar,
                     gambar: signedUrl,
                 };
             })
